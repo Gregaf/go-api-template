@@ -1,3 +1,5 @@
+// Package api provides the HTTP REST API for the portfolio backend housing
+// a variety of HTTP specific logic.
 package api
 
 import (
@@ -7,7 +9,6 @@ import (
 	"time"
 
 	"github.com/go-chi/chi"
-	"github.com/go-chi/chi/middleware"
 	"github.com/gregaf/portfolio-backend/pkg/store"
 	"github.com/sirupsen/logrus"
 )
@@ -15,8 +16,9 @@ import (
 const DEFAULT_TIMEOUT = time.Second * 3
 
 type APIServer struct {
-	addr  string
-	store *store.Store
+	addr   string
+	router *chi.Mux
+	store  *store.Store
 }
 
 func NewAPIServer(addr string, store *store.Store) (*APIServer, error) {
@@ -28,38 +30,22 @@ func NewAPIServer(addr string, store *store.Store) (*APIServer, error) {
 		return nil, errors.New("store cannot be nil")
 	}
 
-	return &APIServer{addr: addr, store: store}, nil
+	// Must review whether router should be passed as dependency instead
+	srv := &APIServer{addr: addr, router: chi.NewRouter(), store: store}
+
+	srv.setupRoutes()
+
+	return srv, nil
 }
 
-func (s *APIServer) router() http.Handler {
-	router := chi.NewRouter()
-
-	// Setup middleware
-	// Setup routes
-	router.Use(middleware.Logger)
-
-	router.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		names, err := s.store.ListCollections(r.Context())
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		var namesConcat string
-		for _, name := range names {
-			namesConcat += name + ", "
-		}
-
-		w.Write([]byte(namesConcat))
-	})
-
-	return router
+func (a *APIServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	a.router.ServeHTTP(w, r)
 }
 
 func (s *APIServer) Start(stop <-chan struct{}) error {
 	srv := &http.Server{
 		Addr:    s.addr,
-		Handler: s.router(),
+		Handler: s,
 	}
 
 	go func() {

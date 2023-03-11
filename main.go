@@ -7,9 +7,16 @@ import (
 
 	"github.com/gregaf/portfolio-backend/pkg/api"
 	"github.com/gregaf/portfolio-backend/pkg/store"
+	"github.com/sirupsen/logrus"
 )
 
 func main() {
+	if err := run(); err != nil {
+		logrus.Fatal(err)
+	}
+}
+
+func run() error {
 	done := make(chan os.Signal, 1)
 	signal.Notify(done, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
 
@@ -33,4 +40,6 @@ func main() {
 	}
 
 	server.Start(stopper)
+
+	return nil
 }

@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -33,15 +32,6 @@ func NewStore(databaseURL string) (*Store, error) {
 
 		return nil, errors.Wrap(err, "failed to connect to database")
 	}
-
-	res, err := conn.Database("portfolio").Collection("skills").InsertOne(context.TODO(), map[string]interface{}{"name": "Go", "level": 5})
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to insert skill")
-	}
-
-	logrus.WithField("id", res.InsertedID).Info("Inserted skill")
-
-	conn.Database("portfolio").CreateCollection(context.TODO(), "skills")
 
 	return &Store{db: conn.Database("portfolio")}, nil
 }
