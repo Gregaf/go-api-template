@@ -9,31 +9,38 @@ import (
 	"time"
 
 	"github.com/go-chi/chi"
-	"github.com/gregaf/portfolio-backend/pkg/store"
+	"github.com/gregaf/portfolio-backend/pkg/app"
 	"github.com/sirupsen/logrus"
 )
 
 const DEFAULT_TIMEOUT = time.Second * 3
 
+// Bind to app layer
 type APIServer struct {
 	addr   string
+	app    *app.App
 	router *chi.Mux
-	store  *store.Store
 }
 
-func NewAPIServer(addr string, store *store.Store) (*APIServer, error) {
+func NewAPIServer(addr string, app *app.App) (*APIServer, error) {
 	if addr == "" {
 		return nil, errors.New("address cannot be empty")
 	}
 
-	if store == nil {
-		return nil, errors.New("store cannot be nil")
-	}
-
 	// Must review whether router should be passed as dependency instead
-	srv := &APIServer{addr: addr, router: chi.NewRouter(), store: store}
+	srv := &APIServer{addr: addr, app: app, router: chi.NewRouter()}
 
 	srv.setupRoutes()
+
+	chi.Walk(srv.router, func(method string, route string, handler http.Handler, middlewares ...func(http.Handler) http.Handler) error {
+		logrus.WithFields(logrus.Fields{
+			"method":      method,
+			"route":       route,
+			"handler":     handler,
+			"middlewares": middlewares,
+		}).Info("Logging route...")
+		return nil
+	})
 
 	return srv, nil
 }
