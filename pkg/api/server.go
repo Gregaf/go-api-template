@@ -1,3 +1,5 @@
+// Package api provides the HTTP REST API for the portfolio backend housing
+// a variety of HTTP specific logic.
 package api
 
 import (
@@ -7,59 +9,50 @@ import (
 	"time"
 
 	"github.com/go-chi/chi"
-	"github.com/go-chi/chi/middleware"
-	"github.com/gregaf/portfolio-backend/pkg/store"
+	"github.com/gregaf/portfolio-backend/pkg/app"
 	"github.com/sirupsen/logrus"
 )
 
 const DEFAULT_TIMEOUT = time.Second * 3
 
+// Bind to app layer
 type APIServer struct {
-	addr  string
-	store *store.Store
+	addr   string
+	app    *app.App
+	router *chi.Mux
 }
 
-func NewAPIServer(addr string, store *store.Store) (*APIServer, error) {
+func NewAPIServer(addr string, app *app.App) (*APIServer, error) {
 	if addr == "" {
 		return nil, errors.New("address cannot be empty")
 	}
 
-	if store == nil {
-		return nil, errors.New("store cannot be nil")
-	}
+	// Must review whether router should be passed as dependency instead
+	srv := &APIServer{addr: addr, app: app, router: chi.NewRouter()}
 
-	return &APIServer{addr: addr, store: store}, nil
-}
+	srv.setupRoutes()
 
-func (s *APIServer) router() http.Handler {
-	router := chi.NewRouter()
-
-	// Setup middleware
-	// Setup routes
-	router.Use(middleware.Logger)
-
-	router.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		names, err := s.store.ListCollections(r.Context())
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		var namesConcat string
-		for _, name := range names {
-			namesConcat += name + ", "
-		}
-
-		w.Write([]byte(namesConcat))
+	chi.Walk(srv.router, func(method string, route string, handler http.Handler, middlewares ...func(http.Handler) http.Handler) error {
+		logrus.WithFields(logrus.Fields{
+			"method":      method,
+			"route":       route,
+			"handler":     handler,
+			"middlewares": middlewares,
+		}).Info("Logging route...")
+		return nil
 	})
 
-	return router
+	return srv, nil
+}
+
+func (a *APIServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	a.router.ServeHTTP(w, r)
 }
 
 func (s *APIServer) Start(stop <-chan struct{}) error {
 	srv := &http.Server{
 		Addr:    s.addr,
-		Handler: s.router(),
+		Handler: s,
 	}
 
 	go func() {
