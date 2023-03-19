@@ -10,7 +10,7 @@ import (
 
 	"github.com/go-chi/chi"
 	"github.com/gregaf/portfolio-backend/pkg/app"
-	"github.com/sirupsen/logrus"
+	"github.com/gregaf/portfolio-backend/pkg/logging"
 )
 
 const DEFAULT_TIMEOUT = time.Second * 3
@@ -20,27 +20,18 @@ type APIServer struct {
 	addr   string
 	app    *app.App
 	router *chi.Mux
+	log    *logging.Logger
 }
 
-func NewAPIServer(addr string, app *app.App) (*APIServer, error) {
+func NewAPIServer(addr string, app *app.App, log *logging.Logger) (*APIServer, error) {
 	if addr == "" {
 		return nil, errors.New("address cannot be empty")
 	}
 
 	// Must review whether router should be passed as dependency instead
-	srv := &APIServer{addr: addr, app: app, router: chi.NewRouter()}
+	srv := &APIServer{addr: addr, app: app, router: chi.NewRouter(), log: log}
 
 	srv.setupRoutes()
-
-	chi.Walk(srv.router, func(method string, route string, handler http.Handler, middlewares ...func(http.Handler) http.Handler) error {
-		logrus.WithFields(logrus.Fields{
-			"method":      method,
-			"route":       route,
-			"handler":     handler,
-			"middlewares": middlewares,
-		}).Info("Logging route...")
-		return nil
-	})
 
 	return srv, nil
 }
@@ -56,9 +47,9 @@ func (s *APIServer) Start(stop <-chan struct{}) error {
 	}
 
 	go func() {
-		logrus.WithField("addr", srv.Addr).Info("starting API server")
+		s.log.WithField("addr", srv.Addr).Info("starting API server")
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			logrus.Fatalf("listen: %s\n", err)
+			s.log.Fatalf("listen: %s\n", err)
 		}
 	}()
 
@@ -66,6 +57,6 @@ func (s *APIServer) Start(stop <-chan struct{}) error {
 	ctx, cancel := context.WithTimeout(context.Background(), DEFAULT_TIMEOUT)
 	defer cancel()
 
-	logrus.WithField("timeout", DEFAULT_TIMEOUT).Info("shutting down API server")
+	s.log.WithField("timeout", DEFAULT_TIMEOUT).Info("shutting down API server")
 	return srv.Shutdown(ctx)
 }

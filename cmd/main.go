@@ -7,7 +7,9 @@ import (
 
 	"github.com/gregaf/portfolio-backend/pkg/api"
 	"github.com/gregaf/portfolio-backend/pkg/app"
+	"github.com/gregaf/portfolio-backend/pkg/logging"
 	"github.com/gregaf/portfolio-backend/pkg/store"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
 
@@ -30,20 +32,26 @@ func run() error {
 	addr := os.Getenv("API_ADDR")
 	databaseURL := os.Getenv("DATABASE_URL")
 
-	storeMongo, err := store.NewStoreMongo(databaseURL)
+	storeLogger := logging.NewLogger(logrus.DebugLevel, os.Stdout)
+
+	// Example using MongoDB as a database
+	_, err := store.NewStoreMongo(databaseURL, storeLogger)
 	if err != nil {
-		panic(err)
+		return errors.Wrap(err, "failed to initialize mongo store")
 	}
 
+	// Store supplied must implement interface
 	store := &store.DbStore{
-		ProjectStore: storeMongo,
-		BlogStore:    nil,
-		ProfileStore: nil,
+		ExampleOneStore:   nil,
+		ExampleTwoStore:   nil,
+		ExampleThreeStore: nil,
 	}
 
 	app := app.NewApp(store)
 
-	server, err := api.NewAPIServer(addr, app)
+	apiLogger := logging.NewLogger(logrus.DebugLevel, os.Stdout)
+
+	server, err := api.NewAPIServer(addr, app, apiLogger)
 	if err != nil {
 		panic(err)
 	}

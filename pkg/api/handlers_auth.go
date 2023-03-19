@@ -19,7 +19,6 @@ func (as *APIServer) handleGoogleLogin() http.HandlerFunc {
 }
 
 func (as *APIServer) handleGoogleCallback() http.HandlerFunc {
-	logrus.Warn("I have been called!")
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		state := r.FormValue("state")

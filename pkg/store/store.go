@@ -1,43 +1,21 @@
 package store
 
-import (
-	"context"
-)
+import "context"
 
 type DbStore struct {
-	ProjectStore
-	BlogStore
-	ProfileStore
+	ExampleOneStore
+	ExampleTwoStore
+	ExampleThreeStore
 }
 
-type Project struct {
-	ID          string
-	BlogID      string
-	Name        string
-	Description string
-	Tags        []string
-	CreatedDate int64
-	UpdatedDate int64
+type ExampleOneStore interface {
+	TemplateOne(ctx context.Context)
 }
 
-type ProjectStore interface {
-	ProjectsList(ctx context.Context) ([]Project, error)
-	ProjectGet(ctx context.Context)
-	ProjectCreate(ctx context.Context)
-	ProjectUpdate(ctx context.Context)
-	ProjectDelete(ctx context.Context)
+type ExampleTwoStore interface {
+	TemplateTwo(ctx context.Context)
 }
 
-type BlogStore interface {
-	ListBlogs(ctx context.Context)
-	GetBlog(ctx context.Context)
-	CreateBlog(ctx context.Context)
-	UpdateBlog(ctx context.Context)
-	DeleteBlog(ctx context.Context)
-}
-
-type ProfileStore interface {
-	GetProfile(ctx context.Context)
-	CreateProfile(ctx context.Context)
-	UpdateProfile(ctx context.Context)
+type ExampleThreeStore interface {
+	TemplateThree(ctx context.Context)
 }

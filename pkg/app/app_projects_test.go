@@ -2,7 +2,6 @@ package app_test
 
 import (
 	"context"
-	"reflect"
 	"testing"
 
 	"github.com/gregaf/portfolio-backend/pkg/app"
@@ -10,40 +9,30 @@ import (
 	"github.com/gregaf/portfolio-backend/pkg/store"
 )
 
-type listProjectsFn func(ctx context.Context) ([]store.Project, error)
+type templateOneFn func(ctx context.Context)
 
-func listProjectsHelper(projects []store.Project, err error) listProjectsFn {
-	return func(ctx context.Context) ([]store.Project, error) {
-		return projects, err
+// This would accept the return type as parameters (High order function)
+func templateOneHelper() templateOneFn {
+	return func(ctx context.Context) {
+		// return inputs as output to control test cases
+		return
 	}
 }
 
 // Laying out intended testing structure
 func TestProjectsList(t *testing.T) {
 
-	// Prepare static lists of projects to provide to test cases
-
-	emptyList := []store.Project{}
-	populatedList := []store.Project{
-		{
-			ID:          "1",
-			BlogID:      "1",
-			Name:        "Project 1",
-			Description: "Project 1 Description",
-		},
-	}
-
 	tests := map[string]struct {
-		listProjectsFn   listProjectsFn
-		expectedProjects []store.Project
+		templateOneFn  templateOneFn
+		expectedOutput string
 	}{
-		"Empty project list": {
-			listProjectsFn:   listProjectsHelper(emptyList, nil),
-			expectedProjects: emptyList,
+		"Test 1": {
+			templateOneFn:  templateOneHelper(),
+			expectedOutput: "",
 		},
-		"Populated project list": {
-			listProjectsFn:   listProjectsHelper(populatedList, nil),
-			expectedProjects: populatedList,
+		"Test 2": {
+			templateOneFn:  templateOneHelper(),
+			expectedOutput: "",
 		},
 	}
 
@@ -51,22 +40,14 @@ func TestProjectsList(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 
 			mockStore := store.DbStore{
-				ProjectStore: &mocks.MockProjectStore{ListProjectsFn: tc.listProjectsFn},
-				BlogStore:    nil,
-				ProfileStore: nil,
+				ExampleOneStore: &mocks.MockProjectStore{TemplateOneFn: tc.templateOneFn},
 			}
 
-			app := app.NewApp(&mockStore)
+			app.NewApp(&mockStore)
 
-			got, err := app.ProjectsList()
+			// Call relevant function
 
-			if err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
-
-			if !reflect.DeepEqual(got, tc.expectedProjects) {
-				t.Fatalf("project lists not equal, expected %v, got %v", tc.expectedProjects, got)
-			}
+			// Assert output
 		})
 	}
 }
